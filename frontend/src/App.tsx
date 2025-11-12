@@ -4,6 +4,7 @@ import DiarySection from './components/DiarySection';
 import DashboardSection from './components/DashboardSection';
 import OnboardingFlow from './components/OnboardingFlow';
 import RecalculationBanner from './components/RecalculationBanner';
+import FutureCalculationIntro from './components/FutureCalculationIntro';
 
 interface Todo {
   id: string;
@@ -39,6 +40,7 @@ interface UserData {
   googleConnected: boolean;
   faceImage: string | null;
   onboardingComplete: boolean;
+  introComplete: boolean;
 }
 
 function App() {
@@ -46,7 +48,8 @@ function App() {
     name: '',
     googleConnected: false,
     faceImage: null,
-    onboardingComplete: false
+    onboardingComplete: false,
+    introComplete: false
   });
 
   const [isRecalculating, setIsRecalculating] = useState(false);
@@ -150,13 +153,31 @@ function App() {
       name: onboardingData.name,
       googleConnected: onboardingData.googleConnected,
       faceImage: onboardingData.faceImage,
-      onboardingComplete: true
+      onboardingComplete: true,
+      introComplete: false
     });
+  };
+
+  const handleIntroComplete = () => {
+    setUserData(prev => ({
+      ...prev,
+      introComplete: true
+    }));
   };
 
   // Show onboarding if not complete
   if (!userData.onboardingComplete) {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
+  }
+
+  // Show future calculation intro if onboarding complete but intro not complete
+  if (!userData.introComplete) {
+    return (
+      <FutureCalculationIntro 
+        isVisible={true}
+        onComplete={handleIntroComplete}
+      />
+    );
   }
 
   return (

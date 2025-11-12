@@ -17,6 +17,11 @@ const VideoSection: React.FC<VideoSectionProps> = ({
     dashboardSection?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const scrollToDashboard = () => {
+    const dashboardSection = document.getElementById('dashboard-section');
+    dashboardSection?.scrollIntoView({ behavior: 'smooth' });
+  };
+
   return (
     <section className="video-section">
       <VideoPlayer videoUrl={videoUrl} isPlaying={true} />
