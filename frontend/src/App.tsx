@@ -55,6 +55,7 @@ function App() {
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [recalculationProgress, setRecalculationProgress] = useState(0);
   const [currentVideo, setCurrentVideo] = useState("/hero-video.mp4");
+  const [mainScenarioState, setMainScenarioState] = useState<'initial' | 'positive' | 'negative'>('initial');
   const [todos, setTodos] = useState<Todo[]>([
     { id: '1', text: 'Complete morning workout', completed: false, impact: 'high' },
     { id: '2', text: 'Learn a new skill for 30 minutes', completed: false, impact: 'high' },
@@ -80,6 +81,63 @@ function App() {
     { id: '7', text: 'You struggle with work-life balance', type: 'negative', probability: 30 },
   ]);
 
+  // Calculate main positive and negative scenarios for video section
+  const getMainScenarios = () => {
+    const positiveScenarios = scenarios.filter(s => s.type === 'positive');
+    const negativeScenarios = scenarios.filter(s => s.type === 'negative');
+    
+    // Get highest probability scenarios
+    const topPositive = positiveScenarios.reduce((prev, current) => 
+      prev.probability > current.probability ? prev : current
+    );
+    const topNegative = negativeScenarios.reduce((prev, current) => 
+      prev.probability > current.probability ? prev : current
+    );
+
+    // Define different main scenarios based on current state
+    const mainScenarios = {
+      initial: {
+        type: 'main' as const,
+        title: 'Your Current Path',
+        description: 'Based on your current habits and goals, this represents your most likely future trajectory. Complete tasks to shift toward a more positive outcome.',
+        probability: Math.round((topPositive.probability + topNegative.probability) / 2),
+        videoUrl: currentVideo
+      },
+      positive: {
+        type: 'main' as const,
+        title: 'Thriving Future',
+        description: 'Your consistent efforts have paid off! You\'re on a path toward achieving your dreams and maintaining positive momentum.',
+        probability: Math.round(topPositive.probability),
+        videoUrl: currentVideo
+      },
+      negative: {
+        type: 'main' as const,
+        title: 'Challenging Path',
+        description: 'Warning signs suggest potential setbacks. Time to refocus and take action to get back on track toward your goals.',
+        probability: Math.round(topNegative.probability),
+        videoUrl: currentVideo
+      }
+    };
+
+    return {
+      main: mainScenarios[mainScenarioState],
+      positive: {
+        type: 'positive' as const,
+        title: 'Success & Growth',
+        description: 'You achieve your fitness goals, build meaningful relationships, and create a fulfilling career path that aligns with your values.',
+        probability: Math.round(topPositive.probability),
+        videoUrl: currentVideo
+      },
+      negative: {
+        type: 'negative' as const,
+        title: 'Stagnation & Struggle', 
+        description: 'Old habits resurface, motivation wanes, and you find yourself struggling to maintain the progress you\'ve worked hard to achieve.',
+        probability: Math.round(topNegative.probability),
+        videoUrl: currentVideo
+      }
+    };
+  };
+
   const diaryEntries: DiaryEntry[] = [
     { day: 1, date: 'Nov 12, 2024', entry: 'Started my journey today. Feeling excited but nervous about the changes ahead. Set up my daily routines and goals.', mood: 'positive' },
     { day: 2, date: 'Nov 13, 2024', entry: 'Completed my morning meditation and workout. Already feeling more energized. The small wins are building momentum.', mood: 'positive' },
@@ -94,6 +152,11 @@ function App() {
 
     // Start recalculation process
     startRecalculation();
+
+    // Transition main scenario to positive when any tasks are completed
+    if (completedTasks.todoIds.length > 0 || completedTasks.routineIds.length > 0) {
+      setMainScenarioState('positive');
+    }
 
     // Mark selected todos as completed
     setTodos(prev => prev.map(todo => {
@@ -180,12 +243,15 @@ function App() {
     );
   }
 
+  const mainScenarios = getMainScenarios();
+
   return (
     <div className="min-h-screen bg-future-dark">
       <VideoSection 
         title="30 Days Later"
-        description={`Welcome back, ${userData.name}`}
-        videoUrl={currentVideo}
+        mainScenario={mainScenarios.main}
+        positiveScenario={mainScenarios.positive}
+        negativeScenario={mainScenarios.negative}
       />
       
       <DashboardSection 

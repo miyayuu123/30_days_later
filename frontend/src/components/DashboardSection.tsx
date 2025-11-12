@@ -127,36 +127,6 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
           </div>
         </div>
 
-        {/* Scenarios Section */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-          <div className="acoustic-card">
-            <h3 className="text-xl font-light text-muted-green mb-4 font-acoustic">✨ POSITIVE</h3>
-            <div className="space-y-3">
-              {positiveScenarios.map((scenario) => (
-                <div key={scenario.id} className="p-3 bg-muted-green/10 border border-muted-green/30 rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-muted-green font-light">{scenario.probability}% likely</span>
-                  </div>
-                  <p className="text-warm-cream/90 text-sm font-light">{scenario.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <div className="acoustic-card">
-            <h3 className="text-xl font-light text-soft-orange mb-4 font-acoustic">⚠️ NEGATIVE</h3>
-            <div className="space-y-3">
-              {negativeScenarios.map((scenario) => (
-                <div key={scenario.id} className="p-3 bg-soft-orange/10 border border-soft-orange/30 rounded-lg">
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-soft-orange font-light">{scenario.probability}% risk</span>
-                  </div>
-                  <p className="text-warm-cream/90 text-sm font-light">{scenario.text}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Todos Section */}
