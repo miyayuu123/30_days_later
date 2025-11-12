@@ -3,6 +3,7 @@ import VideoSection from './components/VideoSection';
 import DiarySection from './components/DiarySection';
 import DashboardSection from './components/DashboardSection';
 import OnboardingFlow from './components/OnboardingFlow';
+import RecalculationBanner from './components/RecalculationBanner';
 
 interface Todo {
   id: string;
@@ -47,6 +48,10 @@ function App() {
     faceImage: null,
     onboardingComplete: false
   });
+
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [recalculationProgress, setRecalculationProgress] = useState(0);
+  const [currentVideo, setCurrentVideo] = useState("/hero-video.mp4");
   const [todos, setTodos] = useState<Todo[]>([
     { id: '1', text: 'Complete morning workout', completed: false, impact: 'high' },
     { id: '2', text: 'Learn a new skill for 30 minutes', completed: false, impact: 'high' },
@@ -81,34 +86,51 @@ function App() {
     { day: 6, date: 'Nov 17, 2024', entry: 'Back on track! Completed all my tasks and routines. The key is not letting one bad day derail everything.', mood: 'positive' },
   ];
 
-  const handleCompleteTask = (taskId: string, type: 'todo' | 'routine') => {
-    if (type === 'todo') {
-      setTodos(prev => prev.map(todo => {
-        if (todo.id === taskId) {
-          const completed = !todo.completed;
-          if (completed && !todo.completed) {
-            updateScenarioProbabilities(todo.impact, 'positive');
-          }
-          return { ...todo, completed };
+  const handleSubmitTasks = (completedTasks: {todoIds: string[], routineIds: string[]}) => {
+    if (isRecalculating) return;
+
+    // Start recalculation process
+    startRecalculation();
+
+    // Mark selected todos as completed
+    setTodos(prev => prev.map(todo => {
+      if (completedTasks.todoIds.includes(todo.id)) {
+        updateScenarioProbabilities(todo.impact, 'positive');
+        return { ...todo, completed: true };
+      }
+      return todo;
+    }));
+
+    // Mark selected routines as completed
+    setRoutines(prev => prev.map(routine => {
+      if (completedTasks.routineIds.includes(routine.id)) {
+        updateScenarioProbabilities(routine.impact, 'positive');
+        return { ...routine, completedToday: true, streak: routine.streak + 1 };
+      }
+      return routine;
+    }));
+  };
+
+  const startRecalculation = () => {
+    setIsRecalculating(true);
+    setRecalculationProgress(0);
+
+    // Simulate recalculation progress
+    const progressInterval = setInterval(() => {
+      setRecalculationProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          setTimeout(() => {
+            setIsRecalculating(false);
+            setRecalculationProgress(0);
+            // Generate new video URL (simulate video change)
+            setCurrentVideo(`/hero-video.mp4?t=${Date.now()}`);
+          }, 500);
+          return 100;
         }
-        return todo;
-      }));
-    } else {
-      setRoutines(prev => prev.map(routine => {
-        if (routine.id === taskId) {
-          const completedToday = !routine.completedToday;
-          if (completedToday && !routine.completedToday) {
-            updateScenarioProbabilities(routine.impact, 'positive');
-            return { ...routine, completedToday, streak: routine.streak + 1 };
-          } else if (!completedToday && routine.completedToday) {
-            updateScenarioProbabilities(routine.impact, 'negative');
-            return { ...routine, completedToday, streak: Math.max(0, routine.streak - 1) };
-          }
-          return { ...routine, completedToday };
-        }
-        return routine;
-      }));
-    }
+        return prev + Math.random() * 15 + 5;
+      });
+    }, 200);
   };
 
   const updateScenarioProbabilities = (impact: string, direction: 'positive' | 'negative') => {
@@ -122,15 +144,6 @@ function App() {
     })));
   };
 
-  const handleAddTodo = (text: string, impact: 'high' | 'medium' | 'low') => {
-    const newTodo: Todo = {
-      id: Date.now().toString(),
-      text,
-      completed: false,
-      impact
-    };
-    setTodos(prev => [...prev, newTodo]);
-  };
 
   const handleOnboardingComplete = (onboardingData: any) => {
     setUserData({
@@ -151,18 +164,23 @@ function App() {
       <VideoSection 
         title="30 Days Later"
         description={`Welcome back, ${userData.name}`}
-        videoUrl="/hero-video.mp4"
+        videoUrl={currentVideo}
       />
       
       <DashboardSection 
         todos={todos}
         routines={routines}
         scenarios={scenarios}
-        onCompleteTask={handleCompleteTask}
-        onAddTodo={handleAddTodo}
+        onSubmitTasks={handleSubmitTasks}
+        isRecalculating={isRecalculating}
       />
       
       <DiarySection entries={diaryEntries} />
+      
+      <RecalculationBanner 
+        isVisible={isRecalculating}
+        progress={recalculationProgress}
+      />
     </div>
   );
 }

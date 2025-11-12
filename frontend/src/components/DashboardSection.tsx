@@ -26,27 +26,47 @@ interface DashboardSectionProps {
   todos: Todo[];
   routines: Routine[];
   scenarios: Scenario[];
-  onCompleteTask: (taskId: string, type: 'todo' | 'routine') => void;
-  onAddTodo: (text: string, impact: 'high' | 'medium' | 'low') => void;
+  onSubmitTasks: (completedTasks: {todoIds: string[], routineIds: string[]}) => void;
+  isRecalculating: boolean;
 }
 
 const DashboardSection: React.FC<DashboardSectionProps> = ({
   todos,
   routines,
   scenarios,
-  onCompleteTask,
-  onAddTodo
+  onSubmitTasks,
+  isRecalculating
 }) => {
-  const [newTodo, setNewTodo] = useState('');
-  const [newTodoImpact, setNewTodoImpact] = useState<'high' | 'medium' | 'low'>('medium');
+  const [selectedTodos, setSelectedTodos] = useState<string[]>([]);
+  const [selectedRoutines, setSelectedRoutines] = useState<string[]>([]);
 
-  const handleAddTodo = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newTodo.trim()) {
-      onAddTodo(newTodo.trim(), newTodoImpact);
-      setNewTodo('');
-    }
+  const handleTodoToggle = (todoId: string) => {
+    setSelectedTodos(prev => 
+      prev.includes(todoId) 
+        ? prev.filter(id => id !== todoId)
+        : [...prev, todoId]
+    );
   };
+
+  const handleRoutineToggle = (routineId: string) => {
+    setSelectedRoutines(prev => 
+      prev.includes(routineId) 
+        ? prev.filter(id => id !== routineId)
+        : [...prev, routineId]
+    );
+  };
+
+  const handleSubmit = () => {
+    if (selectedTodos.length === 0 && selectedRoutines.length === 0) return;
+    onSubmitTasks({
+      todoIds: selectedTodos,
+      routineIds: selectedRoutines
+    });
+    setSelectedTodos([]);
+    setSelectedRoutines([]);
+  };
+
+  const hasSelections = selectedTodos.length > 0 || selectedRoutines.length > 0;
 
   const getImpactColor = (impact: string) => {
     switch (impact) {
@@ -141,56 +161,42 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Todos Section */}
           <div className="acoustic-card">
-            <h3 className="text-xl font-light text-warm-cream mb-4 font-acoustic">📝 Tasks & Goals</h3>
+            <h3 className="text-xl font-light text-warm-cream mb-4 font-acoustic">📝 Generated Tasks</h3>
+            <p className="text-warm-brown/80 text-sm mb-4 font-light">Based on your schedule and goals</p>
             
-            <form onSubmit={handleAddTodo} className="mb-4">
-              <div className="flex gap-2 mb-2">
-                <input
-                  type="text"
-                  value={newTodo}
-                  onChange={(e) => setNewTodo(e.target.value)}
-                  placeholder="Add a new task..."
-                  className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-future-blue"
-                />
-                <select
-                  value={newTodoImpact}
-                  onChange={(e) => setNewTodoImpact(e.target.value as 'high' | 'medium' | 'low')}
-                  className="px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white focus:outline-none focus:ring-2 focus:ring-future-blue"
-                >
-                  <option value="high">High Impact</option>
-                  <option value="medium">Medium Impact</option>
-                  <option value="low">Low Impact</option>
-                </select>
-                <button
-                  type="submit"
-                  className="px-4 py-2 bg-future-blue hover:bg-blue-600 text-white rounded-lg transition-colors"
-                >
-                  Add
-                </button>
-              </div>
-            </form>
-
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {todos.map((todo) => (
-                <div key={todo.id} className={`flex items-center gap-3 p-3 rounded-lg border ${getImpactColor(todo.impact)} ${todo.completed ? 'opacity-50' : ''}`}>
-                  <button
-                    onClick={() => onCompleteTask(todo.id, 'todo')}
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      todo.completed 
-                        ? 'bg-green-500 border-green-500 text-white' 
-                        : 'border-gray-400 hover:border-green-400'
-                    }`}
+              {todos.map((todo) => {
+                const isSelected = selectedTodos.includes(todo.id);
+                const isCompleted = todo.completed;
+                return (
+                  <div key={todo.id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                    isCompleted ? 'opacity-50 border-warm-brown/20' : 
+                    isSelected ? 'border-soft-orange bg-soft-orange/10' : 
+                    'border-warm-brown/30 hover:border-soft-orange/50 hover:bg-soft-orange/5'
+                  }`}
+                  onClick={() => !isCompleted && handleTodoToggle(todo.id)}
                   >
-                    {todo.completed && '✓'}
-                  </button>
-                  <span className={`flex-1 ${todo.completed ? 'line-through text-warm-brown/50' : 'text-warm-cream'} font-light`}>
-                    {todo.text}
-                  </span>
-                  <span className="text-xs text-warm-brown/80 capitalize">
-                    {todo.impact}
-                  </span>
-                </div>
-              ))}
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                      isCompleted 
+                        ? 'bg-muted-green border-muted-green text-white' 
+                        : isSelected
+                        ? 'bg-soft-orange border-soft-orange text-white'
+                        : 'border-warm-brown/40'
+                    }`}>
+                      {(isSelected || isCompleted) && '✓'}
+                    </div>
+                    <span className={`flex-1 font-light ${
+                      isCompleted ? 'line-through text-warm-brown/50' : 
+                      isSelected ? 'text-warm-cream font-medium' : 'text-warm-cream'
+                    }`}>
+                      {todo.text}
+                    </span>
+                    <span className="text-xs text-warm-brown/80 capitalize">
+                      {todo.impact}
+                    </span>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
@@ -199,34 +205,59 @@ const DashboardSection: React.FC<DashboardSectionProps> = ({
             <h3 className="text-xl font-light text-warm-cream mb-4 font-acoustic">🔄 Routines</h3>
             
             <div className="space-y-2 max-h-64 overflow-y-auto">
-              {routines.map((routine) => (
-                <div key={routine.id} className={`flex items-center gap-3 p-3 rounded-lg border ${getImpactColor(routine.impact)}`}>
-                  <button
-                    onClick={() => onCompleteTask(routine.id, 'routine')}
-                    className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
-                      routine.completedToday 
-                        ? 'bg-green-500 border-green-500 text-white' 
-                        : 'border-gray-400 hover:border-green-400'
-                    }`}
+              {routines.map((routine) => {
+                const isSelected = selectedRoutines.includes(routine.id);
+                const isCompleted = routine.completedToday;
+                return (
+                  <div key={routine.id} className={`flex items-center gap-3 p-3 rounded-lg border transition-all cursor-pointer ${
+                    isCompleted ? 'opacity-50 border-warm-brown/20' : 
+                    isSelected ? 'border-soft-orange bg-soft-orange/10' : 
+                    'border-warm-brown/30 hover:border-soft-orange/50 hover:bg-soft-orange/5'
+                  }`}
+                  onClick={() => !isCompleted && handleRoutineToggle(routine.id)}
                   >
-                    {routine.completedToday && '✓'}
-                  </button>
-                  <div className="flex-1">
-                    <span className={`block ${routine.completedToday ? 'text-muted-green' : 'text-warm-cream'} font-light`}>
-                      {routine.name}
-                    </span>
-                    <span className="text-xs text-warm-brown/80 font-light">
-                      {routine.streak} day streak
+                    <div className={`w-5 h-5 rounded border-2 flex items-center justify-center transition-all ${
+                      isCompleted 
+                        ? 'bg-muted-green border-muted-green text-white' 
+                        : isSelected
+                        ? 'bg-soft-orange border-soft-orange text-white'
+                        : 'border-warm-brown/40'
+                    }`}>
+                      {(isSelected || isCompleted) && '✓'}
+                    </div>
+                    <div className="flex-1">
+                      <span className={`block font-light ${
+                        isCompleted ? 'text-muted-green' : 
+                        isSelected ? 'text-warm-cream font-medium' : 'text-warm-cream'
+                      }`}>
+                        {routine.name}
+                      </span>
+                      <span className="text-xs text-warm-brown/80 font-light">
+                        {routine.streak} day streak
+                      </span>
+                    </div>
+                    <span className="text-xs text-warm-brown/80 capitalize">
+                      {routine.impact}
                     </span>
                   </div>
-                  <span className="text-xs text-warm-brown/80 capitalize">
-                    {routine.impact}
-                  </span>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </div>
         </div>
+
+        {/* Submit Button */}
+        {hasSelections && (
+          <div className="flex justify-center mt-8">
+            <button
+              onClick={handleSubmit}
+              disabled={isRecalculating}
+              className="px-8 py-3 bg-soft-orange hover:bg-soft-orange/80 text-warm-cream rounded-xl font-light font-acoustic text-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
+            >
+              Submit Progress ({selectedTodos.length + selectedRoutines.length} tasks)
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
