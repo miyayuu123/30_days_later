@@ -54,8 +54,17 @@ function App() {
 
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [recalculationProgress, setRecalculationProgress] = useState(0);
-  const [currentVideo, setCurrentVideo] = useState("/hero-video.mp4");
   const [mainScenarioState, setMainScenarioState] = useState<'initial' | 'positive' | 'negative'>('initial');
+  const [showTitleReveal, setShowTitleReveal] = useState(false);
+  
+  // Video state management
+  const [videoUrls] = useState({
+    generalInitial: "/general-initial.mp4",
+    positiveInitial: "/positive-initial.mp4", 
+    negativeInitial: "/negative-initial.mp4",
+    positiveAfterSubmit: "generating", // Will show generating placeholder for new positive video
+    negativeAfterSubmit: "/negative-initial.mp4"  // Continue showing negative video
+  });
   const [todos, setTodos] = useState<Todo[]>([
     { id: '1', text: 'Complete morning workout', completed: false, impact: 'high' },
     { id: '2', text: 'Learn a new skill for 30 minutes', completed: false, impact: 'high' },
@@ -94,6 +103,26 @@ function App() {
       prev.probability > current.probability ? prev : current
     );
 
+    // Determine which videos to use based on state
+    const getVideoUrl = (type: 'main' | 'positive' | 'negative') => {
+      if (mainScenarioState === 'initial') {
+        // Before any task completion
+        switch(type) {
+          case 'main': return videoUrls.generalInitial;
+          case 'positive': return videoUrls.positiveInitial;
+          case 'negative': return videoUrls.negativeInitial;
+        }
+      } else if (mainScenarioState === 'positive') {
+        // After task completion - positive becomes main
+        switch(type) {
+          case 'main': return videoUrls.positiveInitial; // Use original positive video as main
+          case 'positive': return videoUrls.positiveAfterSubmit; // Show generating for new positive
+          case 'negative': return videoUrls.negativeAfterSubmit; // Continue showing negative
+        }
+      }
+      return videoUrls.generalInitial;
+    };
+
     // Define different main scenarios based on current state
     const mainScenarios = {
       initial: {
@@ -101,21 +130,21 @@ function App() {
         title: 'Your Current Path',
         description: 'Based on your current habits and goals, this represents your most likely future trajectory. Complete tasks to shift toward a more positive outcome.',
         probability: Math.round((topPositive.probability + topNegative.probability) / 2),
-        videoUrl: currentVideo
+        videoUrl: getVideoUrl('main')
       },
       positive: {
         type: 'main' as const,
         title: 'Thriving Future',
         description: 'Your consistent efforts have paid off! You\'re on a path toward achieving your dreams and maintaining positive momentum.',
         probability: Math.round(topPositive.probability),
-        videoUrl: currentVideo
+        videoUrl: getVideoUrl('main')
       },
       negative: {
         type: 'main' as const,
         title: 'Challenging Path',
         description: 'Warning signs suggest potential setbacks. Time to refocus and take action to get back on track toward your goals.',
         probability: Math.round(topNegative.probability),
-        videoUrl: currentVideo
+        videoUrl: getVideoUrl('main')
       }
     };
 
@@ -126,14 +155,14 @@ function App() {
         title: 'Success & Growth',
         description: 'You achieve your fitness goals, build meaningful relationships, and create a fulfilling career path that aligns with your values.',
         probability: Math.round(topPositive.probability),
-        videoUrl: currentVideo
+        videoUrl: getVideoUrl('positive')
       },
       negative: {
         type: 'negative' as const,
         title: 'Stagnation & Struggle', 
         description: 'Old habits resurface, motivation wanes, and you find yourself struggling to maintain the progress you\'ve worked hard to achieve.',
         probability: Math.round(topNegative.probability),
-        videoUrl: currentVideo
+        videoUrl: getVideoUrl('negative')
       }
     };
   };
@@ -189,14 +218,18 @@ function App() {
           setTimeout(() => {
             setIsRecalculating(false);
             setRecalculationProgress(0);
-            // Generate new video URL (simulate video change)
-            setCurrentVideo(`/hero-video.mp4?t=${Date.now()}`);
+            // Show title reveal after recalculation completes
+            setShowTitleReveal(true);
           }, 500);
           return 100;
         }
         return prev + Math.random() * 15 + 5;
       });
     }, 200);
+  };
+
+  const handleTitleRevealComplete = () => {
+    setShowTitleReveal(false);
   };
 
   const updateScenarioProbabilities = (impact: string, direction: 'positive' | 'negative') => {
@@ -267,6 +300,11 @@ function App() {
       <RecalculationBanner 
         isVisible={isRecalculating}
         progress={recalculationProgress}
+      />
+
+      <FutureCalculationIntro 
+        isVisible={showTitleReveal}
+        onComplete={handleTitleRevealComplete}
       />
     </div>
   );
