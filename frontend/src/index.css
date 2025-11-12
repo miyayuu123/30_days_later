@@ -1,0 +1,96 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply box-border;
+  }
+  
+  body {
+    @apply font-sans antialiased;
+    margin: 0;
+    padding: 0;
+  }
+  
+  #root {
+    @apply min-h-screen w-screen;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .text-warm-cream { color: #f8f6f0; }
+  .text-warm-brown { color: #8b7355; }
+  .text-soft-orange { color: #d4851c; }
+  .text-muted-green { color: #6b7f5a; }
+  
+  .bg-warm-cream { background-color: #f8f6f0; }
+  .bg-warm-brown { background-color: #8b7355; }
+  .bg-soft-orange { background-color: #d4851c; }
+  .bg-muted-green { background-color: #6b7f5a; }
+  
+  .border-warm-brown { border-color: #8b7355; }
+  .border-soft-orange { border-color: #d4851c; }
+  .border-muted-green { border-color: #6b7f5a; }
+}
+
+@layer components {
+  .section {
+    @apply min-h-screen w-full;
+  }
+  
+  .video-section {
+    @apply relative min-h-screen w-full bg-black flex flex-col justify-center items-center;
+  }
+  
+  .video-container {
+    @apply absolute inset-0 w-full h-full bg-black;
+  }
+  
+  .video-player {
+    @apply w-full h-full object-cover;
+  }
+  
+  .overlay {
+    @apply absolute inset-0 bg-gradient-to-t from-black/70 to-transparent pointer-events-none;
+  }
+  
+  .content-overlay {
+    @apply relative z-10 text-center max-w-4xl mx-auto px-6;
+  }
+  
+  .scroll-indicator {
+    @apply absolute bottom-8 left-1/2 transform -translate-x-1/2 animate-bounce;
+  }
+  
+  .diary-section {
+    @apply bg-gradient-to-b from-gray-900 to-future-dark py-16;
+  }
+  
+  .dashboard-section {
+    @apply bg-gradient-to-b from-black via-gray-900 to-gray-800 py-16;
+    background: linear-gradient(to bottom, #000000, #1f2937, #8b7355);
+  }
+  
+  .glass {
+    @apply backdrop-blur-md rounded-2xl;
+    background: rgba(248, 246, 240, 0.05);
+    border: 1px solid rgba(139, 115, 85, 0.2);
+  }
+  
+  .card {
+    @apply backdrop-blur-sm rounded-xl p-6 shadow-lg;
+    background: rgba(248, 246, 240, 0.05);
+    border: 1px solid rgba(139, 115, 85, 0.2);
+  }
+  
+  .acoustic-card {
+    @apply backdrop-blur-sm rounded-xl p-6 shadow-xl;
+    background: linear-gradient(to bottom right, rgba(248, 246, 240, 0.1), rgba(139, 115, 85, 0.1));
+    border: 1px solid rgba(139, 115, 85, 0.3);
+  }
+}
