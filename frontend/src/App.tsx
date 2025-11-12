@@ -3,6 +3,8 @@ import VideoSection from './components/VideoSection';
 import DiarySection from './components/DiarySection';
 import DashboardSection from './components/DashboardSection';
 import OnboardingFlow from './components/OnboardingFlow';
+import RecalculationBanner from './components/RecalculationBanner';
+import FutureCalculationIntro from './components/FutureCalculationIntro';
 
 interface Todo {
   id: string;
@@ -38,6 +40,7 @@ interface UserData {
   googleConnected: boolean;
   faceImage: string | null;
   onboardingComplete: boolean;
+  introComplete: boolean;
 }
 
 function App() {
@@ -45,8 +48,14 @@ function App() {
     name: '',
     googleConnected: false,
     faceImage: null,
-    onboardingComplete: false
+    onboardingComplete: false,
+    introComplete: false
   });
+
+  const [isRecalculating, setIsRecalculating] = useState(false);
+  const [recalculationProgress, setRecalculationProgress] = useState(0);
+  const [currentVideo, setCurrentVideo] = useState("/hero-video.mp4");
+  const [mainScenarioState, setMainScenarioState] = useState<'initial' | 'positive' | 'negative'>('initial');
   const [todos, setTodos] = useState<Todo[]>([
     { id: '1', text: 'Complete morning workout', completed: false, impact: 'high' },
     { id: '2', text: 'Learn a new skill for 30 minutes', completed: false, impact: 'high' },
@@ -72,6 +81,63 @@ function App() {
     { id: '7', text: 'You struggle with work-life balance', type: 'negative', probability: 30 },
   ]);
 
+  // Calculate main positive and negative scenarios for video section
+  const getMainScenarios = () => {
+    const positiveScenarios = scenarios.filter(s => s.type === 'positive');
+    const negativeScenarios = scenarios.filter(s => s.type === 'negative');
+    
+    // Get highest probability scenarios
+    const topPositive = positiveScenarios.reduce((prev, current) => 
+      prev.probability > current.probability ? prev : current
+    );
+    const topNegative = negativeScenarios.reduce((prev, current) => 
+      prev.probability > current.probability ? prev : current
+    );
+
+    // Define different main scenarios based on current state
+    const mainScenarios = {
+      initial: {
+        type: 'main' as const,
+        title: 'Your Current Path',
+        description: 'Based on your current habits and goals, this represents your most likely future trajectory. Complete tasks to shift toward a more positive outcome.',
+        probability: Math.round((topPositive.probability + topNegative.probability) / 2),
+        videoUrl: currentVideo
+      },
+      positive: {
+        type: 'main' as const,
+        title: 'Thriving Future',
+        description: 'Your consistent efforts have paid off! You\'re on a path toward achieving your dreams and maintaining positive momentum.',
+        probability: Math.round(topPositive.probability),
+        videoUrl: currentVideo
+      },
+      negative: {
+        type: 'main' as const,
+        title: 'Challenging Path',
+        description: 'Warning signs suggest potential setbacks. Time to refocus and take action to get back on track toward your goals.',
+        probability: Math.round(topNegative.probability),
+        videoUrl: currentVideo
+      }
+    };
+
+    return {
+      main: mainScenarios[mainScenarioState],
+      positive: {
+        type: 'positive' as const,
+        title: 'Success & Growth',
+        description: 'You achieve your fitness goals, build meaningful relationships, and create a fulfilling career path that aligns with your values.',
+        probability: Math.round(topPositive.probability),
+        videoUrl: currentVideo
+      },
+      negative: {
+        type: 'negative' as const,
+        title: 'Stagnation & Struggle', 
+        description: 'Old habits resurface, motivation wanes, and you find yourself struggling to maintain the progress you\'ve worked hard to achieve.',
+        probability: Math.round(topNegative.probability),
+        videoUrl: currentVideo
+      }
+    };
+  };
+
   const diaryEntries: DiaryEntry[] = [
     { day: 1, date: 'Nov 12, 2024', entry: 'Started my journey today. Feeling excited but nervous about the changes ahead. Set up my daily routines and goals.', mood: 'positive' },
     { day: 2, date: 'Nov 13, 2024', entry: 'Completed my morning meditation and workout. Already feeling more energized. The small wins are building momentum.', mood: 'positive' },
@@ -81,34 +147,56 @@ function App() {
     { day: 6, date: 'Nov 17, 2024', entry: 'Back on track! Completed all my tasks and routines. The key is not letting one bad day derail everything.', mood: 'positive' },
   ];
 
-  const handleCompleteTask = (taskId: string, type: 'todo' | 'routine') => {
-    if (type === 'todo') {
-      setTodos(prev => prev.map(todo => {
-        if (todo.id === taskId) {
-          const completed = !todo.completed;
-          if (completed && !todo.completed) {
-            updateScenarioProbabilities(todo.impact, 'positive');
-          }
-          return { ...todo, completed };
-        }
-        return todo;
-      }));
-    } else {
-      setRoutines(prev => prev.map(routine => {
-        if (routine.id === taskId) {
-          const completedToday = !routine.completedToday;
-          if (completedToday && !routine.completedToday) {
-            updateScenarioProbabilities(routine.impact, 'positive');
-            return { ...routine, completedToday, streak: routine.streak + 1 };
-          } else if (!completedToday && routine.completedToday) {
-            updateScenarioProbabilities(routine.impact, 'negative');
-            return { ...routine, completedToday, streak: Math.max(0, routine.streak - 1) };
-          }
-          return { ...routine, completedToday };
-        }
-        return routine;
-      }));
+  const handleSubmitTasks = (completedTasks: {todoIds: string[], routineIds: string[]}) => {
+    if (isRecalculating) return;
+
+    // Start recalculation process
+    startRecalculation();
+
+    // Transition main scenario to positive when any tasks are completed
+    if (completedTasks.todoIds.length > 0 || completedTasks.routineIds.length > 0) {
+      setMainScenarioState('positive');
     }
+
+    // Mark selected todos as completed
+    setTodos(prev => prev.map(todo => {
+      if (completedTasks.todoIds.includes(todo.id)) {
+        updateScenarioProbabilities(todo.impact, 'positive');
+        return { ...todo, completed: true };
+      }
+      return todo;
+    }));
+
+    // Mark selected routines as completed
+    setRoutines(prev => prev.map(routine => {
+      if (completedTasks.routineIds.includes(routine.id)) {
+        updateScenarioProbabilities(routine.impact, 'positive');
+        return { ...routine, completedToday: true, streak: routine.streak + 1 };
+      }
+      return routine;
+    }));
+  };
+
+  const startRecalculation = () => {
+    setIsRecalculating(true);
+    setRecalculationProgress(0);
+
+    // Simulate recalculation progress
+    const progressInterval = setInterval(() => {
+      setRecalculationProgress(prev => {
+        if (prev >= 100) {
+          clearInterval(progressInterval);
+          setTimeout(() => {
+            setIsRecalculating(false);
+            setRecalculationProgress(0);
+            // Generate new video URL (simulate video change)
+            setCurrentVideo(`/hero-video.mp4?t=${Date.now()}`);
+          }, 500);
+          return 100;
+        }
+        return prev + Math.random() * 15 + 5;
+      });
+    }, 200);
   };
 
   const updateScenarioProbabilities = (impact: string, direction: 'positive' | 'negative') => {
@@ -122,23 +210,22 @@ function App() {
     })));
   };
 
-  const handleAddTodo = (text: string, impact: 'high' | 'medium' | 'low') => {
-    const newTodo: Todo = {
-      id: Date.now().toString(),
-      text,
-      completed: false,
-      impact
-    };
-    setTodos(prev => [...prev, newTodo]);
-  };
 
   const handleOnboardingComplete = (onboardingData: any) => {
     setUserData({
       name: onboardingData.name,
       googleConnected: onboardingData.googleConnected,
       faceImage: onboardingData.faceImage,
-      onboardingComplete: true
+      onboardingComplete: true,
+      introComplete: false
     });
+  };
+
+  const handleIntroComplete = () => {
+    setUserData(prev => ({
+      ...prev,
+      introComplete: true
+    }));
   };
 
   // Show onboarding if not complete
@@ -146,23 +233,41 @@ function App() {
     return <OnboardingFlow onComplete={handleOnboardingComplete} />;
   }
 
+  // Show future calculation intro if onboarding complete but intro not complete
+  if (!userData.introComplete) {
+    return (
+      <FutureCalculationIntro 
+        isVisible={true}
+        onComplete={handleIntroComplete}
+      />
+    );
+  }
+
+  const mainScenarios = getMainScenarios();
+
   return (
     <div className="min-h-screen bg-future-dark">
       <VideoSection 
         title="30 Days Later"
-        description={`Welcome back, ${userData.name}`}
-        videoUrl="/hero-video.mp4"
+        mainScenario={mainScenarios.main}
+        positiveScenario={mainScenarios.positive}
+        negativeScenario={mainScenarios.negative}
       />
       
       <DashboardSection 
         todos={todos}
         routines={routines}
         scenarios={scenarios}
-        onCompleteTask={handleCompleteTask}
-        onAddTodo={handleAddTodo}
+        onSubmitTasks={handleSubmitTasks}
+        isRecalculating={isRecalculating}
       />
       
       <DiarySection entries={diaryEntries} />
+      
+      <RecalculationBanner 
+        isVisible={isRecalculating}
+        progress={recalculationProgress}
+      />
     </div>
   );
 }
